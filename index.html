@@ -1,0 +1,575 @@
+<meta name="claude:viewport-fit-sides" content="cover">
+<title>Acompanhamento de Produção</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600&family=Roboto:wght@400;500;700&display=swap" rel="stylesheet">
+<style>
+/* Layout: dashboard interno (tabela por fornecedor + fase) + link mobile-first pro fornecedor preencher.
+   Paleta e tipografia espelham o Projeto_OPs real (--bg/--panel/--card, Space Grotesk + JetBrains Mono). */
+:root{
+  --bg:#0A0D14; --panel:#0F1420; --card:#141A28; --card-hi:#1A2131;
+  --line:#212a3b; --line-soft:#18202e;
+  --txt-hi:#EAEEF6; --txt-mid:#93A0B8; --txt-lo:#586179;
+  --accent:#7B7BF5; --accent-dim:#5657c7; --accent-glow:rgba(123,123,245,.16);
+  --danger:#FF4D67; --warn-hi:#FF884C; --warn:#F5B93C; --ok:#35D08A; --info:#34C7E8;
+  --radius:14px;
+  --sans:'Space Grotesk',system-ui,sans-serif;
+  --mono:'JetBrains Mono',ui-monospace,monospace;
+  color-scheme: dark;
+}
+*{box-sizing:border-box}
+body{
+  margin:0; background:var(--bg); color:var(--txt-hi); font-family:var(--sans);
+  -webkit-font-smoothing:antialiased;
+  padding-left:max(16px, env(safe-area-inset-left,0px));
+  padding-right:max(16px, env(safe-area-inset-right,0px));
+}
+
+/* ---- modo "planilha" — a página do fornecedor pisa por cima dos tokens dark com um
+   visual claro ao estilo Google Sheets (grade, cabeçalho cinza, azul de seleção). Como
+   quase todo componente lê as variáveis de cor e fonte (bg, card, line, txt, accent, sans),
+   sobrescrever aqui recolore tudo que está dentro do body sem duplicar seletor por seletor. */
+body.sheet-mode{
+  --bg:#ffffff; --panel:#f8f9fa; --card:#ffffff; --card-hi:#f1f3f4;
+  --line:#dadce0; --line-soft:#e8eaed;
+  --txt-hi:#202124; --txt-mid:#5f6368; --txt-lo:#80868b;
+  --accent:#1a73e8; --accent-dim:#1967d2; --accent-glow:rgba(26,115,232,.12);
+  --sans:'Roboto',Arial,'Helvetica Neue',sans-serif;
+  --mono:'Roboto',Arial,sans-serif;
+  color-scheme: light;
+}
+body.sheet-mode .swatch{border-color: rgba(0,0,0,.12)}
+body.sheet-mode .f-header{background:#fff; box-shadow:0 1px 3px rgba(60,64,67,.12)}
+body.sheet-mode .save-btn, body.sheet-mode .email-mock .em-link{color:#fff}
+
+/* colunas de número de linha, pra reforçar a leitura "planilha" */
+.rownum{width:30px !important; min-width:30px; text-align:center !important; color:var(--txt-lo); font-variant-numeric:tabular-nums; background:var(--panel); border-right:1px solid var(--line) !important; user-select:none}
+th.rownum{position:sticky; left:0; z-index:1}
+h1,h2,h3{font-family:var(--sans); margin:0; text-wrap:balance}
+.wrap{max-width:1180px; margin:0 auto; padding-block:28px 48px}
+.eyebrow{font-family:var(--mono); font-size:10.5px; letter-spacing:1.6px; color:var(--txt-lo); text-transform:uppercase}
+
+/* ---- tabs ---- */
+.tabs{display:flex; gap:6px; margin:20px 0 22px; border-bottom:1px solid var(--line-soft); padding-bottom:0}
+.tab{
+  font-family:var(--sans); font-weight:600; font-size:13.5px; color:var(--txt-mid);
+  background:none; border:none; padding:10px 4px; cursor:pointer; position:relative;
+  display:flex; align-items:center; gap:8px;
+}
+.tab .n{font-family:var(--mono); font-size:10px; color:var(--txt-lo); background:var(--card-hi); border-radius:999px; padding:2px 7px}
+.tab + .tab{margin-left:18px}
+.tab.on{color:var(--txt-hi)}
+.tab.on::after{content:"";position:absolute; left:0; right:0; bottom:-1px; height:2px; background:var(--accent); border-radius:2px}
+.tab:hover{color:var(--txt-hi)}
+.view{display:none}
+.view.on{display:block}
+
+/* ---- header block ---- */
+.header-row{display:flex; justify-content:space-between; align-items:flex-start; gap:20px; flex-wrap:wrap}
+.header-row h1{font-size:22px; font-weight:700}
+.header-row .desc{color:var(--txt-mid); font-size:13.5px; margin-top:6px; max-width:52ch}
+.reminder-chip{
+  display:flex; align-items:center; gap:10px; background:var(--card); border:1px solid var(--line);
+  border-radius:999px; padding:8px 14px 8px 8px; flex-shrink:0;
+}
+.reminder-chip .dot{width:30px; height:30px; border-radius:50%; background:linear-gradient(145deg,var(--accent),var(--accent-dim)); display:grid; place-items:center; flex-shrink:0}
+.reminder-chip .dot svg{width:15px; height:15px}
+.reminder-chip .t{font-size:11.5px; color:var(--txt-lo); line-height:1.3}
+.reminder-chip .t b{color:var(--txt-hi); font-weight:600; display:block; font-size:12.5px}
+
+/* ---- kpi tiles ---- */
+.kpis{display:grid; grid-template-columns:repeat(4,1fr); gap:12px; margin:22px 0}
+.kpi{background:var(--card); border:1px solid var(--line); border-radius:var(--radius); padding:16px 18px}
+.kpi .v{font-size:26px; font-weight:700; font-variant-numeric:tabular-nums; line-height:1.1}
+.kpi .l{color:var(--txt-mid); font-size:12px; margin-top:6px}
+.kpi.warn .v{color:var(--warn)}
+.kpi.danger .v{color:var(--danger)}
+.kpi.ok .v{color:var(--ok)}
+
+/* ---- filter chips ---- */
+.chips{display:flex; gap:8px; flex-wrap:wrap; margin:18px 0 16px}
+.chipf{
+  font-family:var(--sans); font-size:12.5px; font-weight:600; color:var(--txt-mid);
+  background:var(--card); border:1px solid var(--line); border-radius:999px; padding:7px 14px; cursor:pointer;
+}
+.chipf.on{color:var(--txt-hi); border-color:var(--accent); background:var(--accent-glow)}
+.chipf:hover{color:var(--txt-hi)}
+
+/* ---- OP cards (internal) ---- */
+.oplist{display:flex; flex-direction:column; gap:10px}
+.op{
+  background:var(--card); border:1px solid var(--line); border-radius:var(--radius);
+  padding:16px 18px; display:flex; flex-direction:column; gap:12px;
+}
+.op-top{display:flex; justify-content:space-between; gap:16px; flex-wrap:wrap}
+.op-prod{display:flex; gap:12px; align-items:flex-start; min-width:0}
+.swatch{width:34px; height:34px; border-radius:9px; flex-shrink:0; margin-top:2px; border:1px solid rgba(255,255,255,.08)}
+.op-prod .name{font-weight:600; font-size:14px}
+.op-prod .meta{font-family:var(--mono); font-size:11px; color:var(--txt-lo); margin-top:3px; letter-spacing:.2px}
+.op-right{display:flex; gap:22px; flex-wrap:wrap; align-items:center}
+.stat{min-width:0}
+.stat .l{font-size:10.5px; color:var(--txt-lo); font-family:var(--mono); letter-spacing:.8px; text-transform:uppercase}
+.stat .v{font-size:13px; font-weight:600; margin-top:3px; font-variant-numeric:tabular-nums}
+.stat .v.changed{color:var(--warn)}
+.stat .v.changed .arrow{color:var(--txt-lo); font-weight:400; margin:0 4px}
+
+.stepper{display:flex; align-items:center; gap:0; margin-top:4px}
+.step{width:9px; height:9px; border-radius:50%; background:var(--line); flex-shrink:0; position:relative}
+.step.done{background:var(--ok)}
+.step.now{background:var(--accent); box-shadow:0 0 0 3px var(--accent-glow)}
+.step-line{width:14px; height:2px; background:var(--line)}
+.step-line.done{background:var(--ok)}
+.phase-pill{
+  display:inline-flex; align-items:center; gap:6px; font-size:12px; font-weight:600;
+  padding:5px 11px; border-radius:999px; background:var(--card-hi); color:var(--txt-hi); margin-top:5px;
+}
+.phase-pill .dot2{width:6px; height:6px; border-radius:50%; background:var(--accent)}
+
+.op-meta-row{display:flex; justify-content:space-between; align-items:center; gap:12px; flex-wrap:wrap; border-top:1px solid var(--line-soft); padding-top:11px}
+.updated{font-size:11.5px; color:var(--txt-lo)}
+.updated.stale{color:var(--danger)}
+.hist-btn{
+  font-family:var(--sans); font-size:11.5px; font-weight:600; color:var(--txt-mid); background:none;
+  border:1px solid var(--line); border-radius:8px; padding:5px 10px; cursor:pointer; display:flex; gap:6px; align-items:center;
+}
+.hist-btn:hover{color:var(--txt-hi); border-color:var(--accent)}
+.hist-btn svg{width:12px; height:12px}
+
+.history{display:none; flex-direction:column; gap:8px; border-top:1px solid var(--line-soft); padding-top:12px; margin-top:2px}
+.history.on{display:flex}
+.hitem{display:flex; gap:10px; font-size:12px}
+.hitem .hdot{width:7px; height:7px; border-radius:50%; background:var(--accent); margin-top:5px; flex-shrink:0}
+.hitem .hbody{color:var(--txt-mid)}
+.hitem .hbody b{color:var(--txt-hi); font-weight:600}
+.hitem .htime{font-family:var(--mono); color:var(--txt-lo); font-size:10.5px; margin-left:auto; flex-shrink:0; padding-top:1px}
+
+/* ---- fornecedor view ---- */
+.fview-wrap{max-width:1180px; margin:0 auto}
+
+/* preview do e-mail que dispara o link */
+.email-mock{background:var(--card); border:1px solid var(--line); border-radius:var(--radius); padding:16px 18px; margin:4px 0 18px; max-width:620px}
+.email-mock .em-from{display:flex; align-items:center; gap:10px; font-size:12px; color:var(--txt-mid)}
+.email-mock .em-avatar{width:26px; height:26px; border-radius:50%; background:linear-gradient(145deg,var(--accent),var(--accent-dim)); flex-shrink:0; display:grid; place-items:center; font-family:var(--mono); font-size:10px; font-weight:700; color:#fff}
+.email-mock .em-subject{font-weight:700; font-size:14px; margin-top:12px}
+.email-mock .em-body{font-size:12.5px; color:var(--txt-mid); margin-top:8px; line-height:1.6}
+.email-mock .em-link{
+  display:inline-flex; align-items:center; gap:8px; margin-top:14px; background:var(--accent); color:#fff;
+  font-weight:700; font-size:12.5px; padding:9px 16px; border-radius:9px;
+}
+.email-mock .em-link svg{width:13px;height:13px}
+.email-mock .em-url{font-family:var(--mono); font-size:10.5px; color:var(--txt-lo); margin-top:8px; word-break:break-all}
+
+.f-header{background:linear-gradient(160deg,var(--card-hi),var(--panel)); border:1px solid var(--line); border-radius:var(--radius); padding:20px; margin-top:4px}
+.f-header .brand{display:flex; align-items:center; gap:10px}
+.f-header .mark{width:34px; height:34px; border-radius:9px; background:linear-gradient(145deg,var(--accent),var(--accent-dim)); display:grid; place-items:center; flex-shrink:0}
+.f-header .mark svg{width:17px;height:17px}
+.f-header h1{font-size:18px}
+.f-header .sub{color:var(--txt-mid); font-size:12.5px; margin-top:10px; line-height:1.5}
+.f-header .due{display:inline-flex; gap:7px; align-items:center; margin-top:12px; font-size:11.5px; color:var(--warn); font-weight:600}
+
+/* grade editável — uma linha por OP, pensada pra preencher muitas de uma vez (como na planilha de hoje) */
+.ftable-scroll{overflow-x:auto; margin-top:16px; border:1px solid var(--line); border-radius:var(--radius)}
+table.ftable{width:100%; border-collapse:collapse; min-width:760px}
+table.ftable th{
+  position:sticky; top:0; background:var(--panel); text-align:left; font-family:var(--mono); font-size:10px;
+  letter-spacing:.8px; text-transform:uppercase; color:var(--txt-lo); padding:11px 12px; border-bottom:1px solid var(--line); white-space:nowrap;
+}
+table.ftable td{padding:9px 12px; border-bottom:1px solid var(--line-soft); vertical-align:middle}
+table.ftable tr:last-child td{border-bottom:none}
+table.ftable tr:hover td{background:var(--card-hi)}
+.fr-prod{display:flex; align-items:center; gap:9px; min-width:170px}
+.fr-prod .swatch{width:22px; height:22px; border-radius:6px; margin:0; flex-shrink:0}
+.fr-prod .tx .name{font-size:12.5px; font-weight:600; white-space:nowrap}
+.fr-prod .tx .meta{font-family:var(--mono); font-size:10px; color:var(--txt-lo); margin-top:1px}
+.fr-ro{font-size:12px; color:var(--txt-mid); font-variant-numeric:tabular-nums; white-space:nowrap}
+.field select, .field input, .field textarea{
+  background:var(--panel); border:1px solid var(--line); color:var(--txt-hi);
+  border-radius:8px; padding:8px 10px; font-family:var(--sans); font-size:12.5px; appearance:none;
+}
+select.fr-fase{min-width:188px}
+input.fr-data{width:84px; font-variant-numeric:tabular-nums}
+input.fr-obs{width:200px}
+.field select{
+  background-image:url('data:image/svg+xml,%3Csvg xmlns="http://www.w3.org/2000/svg" width="10" height="6"%3E%3Cpath d="M0 0l5 6 5-6z" fill="%2393A0B8"/%3E%3C/svg%3E');
+  background-repeat:no-repeat; background-position:right 10px center; padding-right:26px;
+}
+.field select:focus, .field input:focus, .field textarea:focus{outline:2px solid var(--accent); outline-offset:1px; border-color:var(--accent)}
+.fcount{color:var(--txt-mid); font-size:12.5px; margin-top:16px}
+.fcount b{color:var(--txt-hi)}
+
+.save-bar{position:sticky; bottom:0; background:linear-gradient(0deg,var(--bg) 60%,transparent); padding-top:22px; padding-bottom:max(18px, env(safe-area-inset-bottom,0px)); margin-top:4px; display:flex; justify-content:flex-end}
+.save-btn{
+  background:var(--accent); color:#fff; border:none; border-radius:11px; padding:13px 22px;
+  font-family:var(--sans); font-weight:700; font-size:13.5px; cursor:pointer; display:flex; align-items:center; justify-content:center; gap:8px;
+}
+.save-btn:hover{background:var(--accent-dim)}
+.save-btn svg{width:16px;height:16px}
+.f-foot{color:var(--txt-lo); font-size:11px; text-align:center; margin-top:14px; line-height:1.5}
+
+.toast{
+  position:fixed; left:50%; bottom:28px; transform:translateX(-50%) translateY(140%);
+  background:var(--card-hi); border:1px solid var(--line); color:var(--txt-hi); font-size:12.5px; font-weight:600;
+  padding:11px 18px; border-radius:999px; display:flex; align-items:center; gap:8px; z-index:50;
+  transition:transform .28s ease; box-shadow:0 10px 30px -8px rgba(0,0,0,.5);
+}
+.toast.on{transform:translateX(-50%) translateY(0)}
+.toast svg{width:14px;height:14px; color:var(--ok)}
+
+.fsecondary{margin-top:30px; border-top:1px solid var(--line-soft); padding-top:4px}
+.fsecondary summary{cursor:pointer; font-size:13px; font-weight:600; color:var(--txt-mid); list-style:none; display:flex; align-items:center; gap:8px; padding:12px 0; user-select:none}
+.fsecondary summary::-webkit-details-marker{display:none}
+.fsecondary summary .car{transition:transform .2s; color:var(--txt-lo); font-size:11px}
+.fsecondary[open] summary .car{transform:rotate(90deg)}
+.fsecondary summary .n{font-family:var(--mono); font-size:10px; color:var(--txt-lo); background:var(--card-hi); border-radius:999px; padding:2px 7px; margin-left:2px}
+.fsecondary .fsec-note{font-size:12px; color:var(--txt-lo); margin:0 0 10px}
+.month-sep td{background:var(--panel); font-family:var(--mono); font-size:10px; letter-spacing:.6px; text-transform:uppercase; color:var(--txt-lo); padding:7px 12px; border-bottom:1px solid var(--line)}
+
+/* ---- legenda (topo da página do fornecedor) ---- */
+.legend{display:flex; flex-wrap:wrap; gap:18px; align-items:center; margin:18px 0 4px; padding:13px 16px; background:var(--card); border:1px solid var(--line); border-radius:var(--radius)}
+.legend .litem{display:flex; align-items:center; gap:8px; font-size:12px; color:var(--txt-mid)}
+.legend .litem b{color:var(--txt-hi); font-weight:600}
+.legend .ldot{width:8px; height:8px; border-radius:50%; flex-shrink:0}
+.legend .ldot.red{background:var(--danger)}
+.legend .ldot.gray{background:var(--txt-lo)}
+.legend .lsep{width:1px; height:16px; background:var(--line-soft); flex-shrink:0}
+.legend .lfield{font-family:var(--mono); font-size:10.5px; color:var(--accent); background:var(--accent-glow); padding:2px 7px; border-radius:6px}
+
+@media (max-width: 760px){
+  .kpis{grid-template-columns:repeat(2,1fr)}
+  .op-right{gap:14px}
+}
+@media (max-width: 480px){
+  .kpis{grid-template-columns:1fr 1fr}
+  .op-top{flex-direction:column}
+  .save-bar{justify-content:stretch}
+  .save-btn{width:100%}
+}
+</style>
+
+<div class="wrap">
+  <div class="eyebrow">Projeto_OPs · Mockup — não é tela em produção</div>
+
+  <div class="tabs" role="tablist">
+    <button class="tab on" data-tab="interno" role="tab">Visão interna (Sourcing)</button>
+    <button class="tab" data-tab="fornecedor" role="tab">O que o fornecedor vê <span class="n">link próprio</span></button>
+  </div>
+
+  <!-- ============ VISÃO INTERNA ============ -->
+  <section class="view on" id="view-interno">
+    <div class="header-row">
+      <div>
+        <h1>Acompanhamento de Produção</h1>
+        <div class="desc">Fase de cada OP, atualizada pelo próprio fornecedor — sem mais copiar e colar planilha.</div>
+      </div>
+      <div class="reminder-chip">
+        <div class="dot"><svg viewBox="0 0 24 24" fill="none"><path d="M12 5v7l4 2" stroke="#fff" stroke-width="2" stroke-linecap="round"/><circle cx="12" cy="12" r="9" stroke="#fff" stroke-width="2"/></svg></div>
+        <div class="t"><b>Próximo lembrete: qui 09:00</b>8 fornecedores, por e-mail</div>
+      </div>
+    </div>
+
+    <div class="eyebrow" style="margin:22px 0 10px">O que o fornecedor recebeu por e-mail, hoje 09:00</div>
+    <div class="email-mock">
+      <div class="em-from"><div class="em-avatar">RI</div>Reserva Ink Sourcing &lt;sourcing@reserva.ink&gt; · hoje, 09:00</div>
+      <div class="em-subject">Follow de Produção — atualize suas OPs (semana 09–13/11)</div>
+      <div class="em-body">Olá, FLOC! Está na hora do follow semanal. Preencha a fase e a previsão de entrega das suas OPs em aberto pelo link abaixo — leva uns 3 minutos.</div>
+      <div class="em-link"><svg viewBox="0 0 24 24" fill="none"><path d="M10 14a5 5 0 007 0l3-3a5 5 0 00-7-7l-1 1M14 10a5 5 0 00-7 0l-3 3a5 5 0 007 7l1-1" stroke="#fff" stroke-width="2" stroke-linecap="round"/></svg>Abrir meu follow</div>
+      <div class="em-url">app.reservaink.com.br/follow/f/a8c1-floc-09nov</div>
+    </div>
+
+    <div class="kpis">
+      <div class="kpi"><div class="v">42</div><div class="l">OPs acompanhadas</div></div>
+      <div class="kpi ok"><div class="v">35</div><div class="l">Atualizadas essa semana</div></div>
+      <div class="kpi warn"><div class="v">7</div><div class="l">Sem resposta há +7 dias</div></div>
+      <div class="kpi danger"><div class="v">4</div><div class="l">Data de entrega mudou</div></div>
+    </div>
+
+    <div class="chips" id="chips-fornecedor">
+      <button class="chipf on" data-f="all">Todos</button>
+      <button class="chipf" data-f="FLOC">FLOC TÊXTIL</button>
+      <button class="chipf" data-f="CIA HERING">CIA HERING</button>
+      <button class="chipf" data-f="MATYLAS">MATYLAS CONFECÇÕES</button>
+    </div>
+
+    <div class="oplist" id="oplist"></div>
+  </section>
+
+  <!-- ============ VISÃO FORNECEDOR ============ -->
+  <section class="view" id="view-fornecedor">
+    <div class="fview-wrap">
+      <div class="f-header">
+        <div class="brand">
+          <div class="mark"><svg viewBox="0 0 24 24" fill="none"><path d="M4 20V10l4-3 4 3v-3l4-3 4 3v13" stroke="#fff" stroke-width="2" stroke-linejoin="round"/></svg></div>
+          <h1>Follow de Produção</h1>
+        </div>
+        <div class="sub">FORNECEDOR TESTE LTDA · Reserva Ink<br>Atualize a fase e a data de entrega de cada pedido. Mesmo formato de linhas da planilha de hoje — só que sem precisar reenviar arquivo.</div>
+        <div class="due">
+          <svg width="13" height="13" viewBox="0 0 24 24" fill="none"><path d="M12 8v5l3 2" stroke="currentColor" stroke-width="2" stroke-linecap="round"/><circle cx="12" cy="12" r="9" stroke="currentColor" stroke-width="2"/></svg>
+          Preencher até sexta-feira, 13/11
+        </div>
+      </div>
+
+      <div class="legend">
+        <div class="litem"><span class="ldot red"></span><b>Prioridade</b> — entrega esse mês, atualize primeiro</div>
+        <div class="lsep"></div>
+        <div class="litem"><span class="ldot gray"></span><b>Outras OPs</b> — entregam mais pra frente, sem pressa</div>
+        <div class="lsep"></div>
+        <div class="litem">Você preenche: <span class="lfield">Fase produtiva</span><span class="lfield">Entrega confirmada</span><span class="lfield">Observação</span></div>
+      </div>
+
+      <div class="eyebrow" style="margin:22px 0 2px">🔴 Prioridade — entregam em novembro/2026</div>
+      <div class="ftable-scroll">
+        <table class="ftable">
+          <thead>
+            <tr>
+              <th class="rownum"></th><th>Produto</th><th>OP</th><th>Qtd</th><th>Prazo sistema</th><th>Fase produtiva</th><th>Entrega confirmada</th><th>Observação</th>
+            </tr>
+          </thead>
+          <tbody id="foptbody"></tbody>
+        </table>
+      </div>
+      <div class="fcount" id="fcount"></div>
+
+      <details class="fsecondary">
+        <summary><span class="car">▸</span> Outras OPs em aberto — sem prioridade essa semana <span class="n" id="fsec-count"></span></summary>
+        <div class="fsec-note">Entregam mais pra frente. Pode atualizar também, mas não é urgente.</div>
+        <div class="ftable-scroll">
+          <table class="ftable">
+            <thead>
+              <tr>
+                <th class="rownum"></th><th>Produto</th><th>OP</th><th>Qtd</th><th>Prazo sistema</th><th>Fase produtiva</th><th>Entrega confirmada</th><th>Observação</th>
+              </tr>
+            </thead>
+            <tbody id="fsectbody"></tbody>
+          </table>
+        </div>
+      </details>
+
+      <div class="save-bar">
+        <button class="save-btn" id="btn-save">
+          <svg viewBox="0 0 24 24" fill="none"><path d="M5 12l5 5L20 7" stroke="#fff" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"/></svg>
+          Salvar atualizações
+        </button>
+      </div>
+
+      <div class="f-foot">Essas informações chegam direto pro time de Sourcing.<br>Dúvidas? Fale com sourcing@reserva.ink</div>
+    </div>
+  </section>
+</div>
+
+<div class="toast" id="toast">
+  <svg viewBox="0 0 24 24" fill="none"><path d="M5 12l5 5L20 7" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"/></svg>
+  <span id="toast-text">Atualização salva</span>
+</div>
+
+<script>
+// Dados de exemplo — ilustram o formato, não são dados reais do app.
+const FASES = ['Matéria-prima em estoque','Fila de corte','Costura','Estamparia','Acabamento interno','Controle de qualidade','Revisão de processo','Faturado'];
+
+const OPS = [
+  { op:'O7224746', fornecedor:'FLOC', fornecedorNome:'FLOC TÊXTIL INDÚSTRIA E C', produto:'0061128', nome:'Camiseta MAS Ink Ondemand MP', cor:'#f5f1ea', corNome:'Branco 014', qtd:2040,
+    limiteSistema:'03/06', dataConfirmada:'10/06', fase:5, obs:'Atraso no tecido importado — já normalizado.', atualizadoHa:'há 2 dias', stale:false,
+    hist:[['11/11 09:40','Fase: <b>Costura → Controle de qualidade</b>'],['08/11 14:05','Data de entrega alterada: <b>03/06 → 10/06</b> — Obs: atraso no tecido importado']] },
+  { op:'O7861553', fornecedor:'FLOC', fornecedorNome:'FLOC TÊXTIL INDÚSTRIA E C', produto:'0061128', nome:'Camiseta MAS Ink Ondemand MP', cor:'#f5f1ea', corNome:'Branco 014', qtd:2000,
+    limiteSistema:'16/10', dataConfirmada:'16/10', fase:3, obs:'', atualizadoHa:'há 1 dia', stale:false,
+    hist:[['10/11 11:02','Fase: <b>Fila de corte → Estamparia</b>']] },
+  { op:'O7224747', fornecedor:'FLOC', fornecedorNome:'FLOC TÊXTIL INDÚSTRIA E C', produto:'0061128', nome:'Camiseta MAS Ink Ondemand MP', cor:'#f5f1ea', corNome:'Branco 014', qtd:2000,
+    limiteSistema:'11/12', dataConfirmada:'11/12', fase:0, obs:'', atualizadoHa:'há 11 dias', stale:true, hist:[] },
+  { op:'O7224788', fornecedor:'FLOC', fornecedorNome:'FLOC TÊXTIL INDÚSTRIA E C', produto:'0061129', nome:'Camiseta Fem Ink Ondemand MP', cor:'#f5f1ea', corNome:'Branco 014', qtd:2000,
+    limiteSistema:'19/12', dataConfirmada:'19/12', fase:1, obs:'', atualizadoHa:'há 1 dia', stale:false, hist:[['10/11 09:12','Fase: <b>MP em estoque → Fila de corte</b>']] },
+  { op:'O7261933', fornecedor:'FLOC', fornecedorNome:'FLOC TÊXTIL INDÚSTRIA E C', produto:'0061129', nome:'Camiseta Fem Ink Ondemand MP', cor:'#15181f', corNome:'Preto 040', qtd:2000,
+    limiteSistema:'18/12', dataConfirmada:'18/12', fase:0, obs:'', atualizadoHa:'há 11 dias', stale:true, hist:[] },
+  { op:'O7261954', fornecedor:'FLOC', fornecedorNome:'FLOC TÊXTIL INDÚSTRIA E C', produto:'0061129', nome:'Camiseta Fem Ink Ondemand MP', cor:'#15181f', corNome:'Preto 040', qtd:1850,
+    limiteSistema:'07/05', dataConfirmada:'07/05', fase:4, obs:'', atualizadoHa:'há 3 dias', stale:false, hist:[['08/11 16:40','Fase: <b>Estamparia → Acabamento interno</b>']] },
+  { op:'O7261955', fornecedor:'FLOC', fornecedorNome:'FLOC TÊXTIL INDÚSTRIA E C', produto:'0061128', nome:'Camiseta MAS Ink Ondemand MP', cor:'#15181f', corNome:'Preto 040', qtd:2200,
+    limiteSistema:'07/05', dataConfirmada:'14/05', fase:2, obs:'Fila de corte atrasada, pedimos prioridade.', atualizadoHa:'há 2 dias', stale:false,
+    hist:[['09/11 10:15','Data de entrega alterada: <b>07/05 → 14/05</b> — Obs: fila de corte atrasada']] },
+  { op:'O7224796', fornecedor:'FLOC', fornecedorNome:'FLOC TÊXTIL INDÚSTRIA E C', produto:'0061128', nome:'Camiseta MAS Ink Ondemand MP', cor:'#f5f1ea', corNome:'Branco 014', qtd:2000,
+    limiteSistema:'28/04', dataConfirmada:'28/04', fase:6, obs:'', atualizadoHa:'há 5 horas', stale:false, hist:[['11/11 13:50','Fase: <b>Controle de qualidade → Revisão de processo</b>']] },
+  { op:'O7224737', fornecedor:'FLOC', fornecedorNome:'FLOC TÊXTIL INDÚSTRIA E C', produto:'0061128', nome:'Camiseta MAS Ink Ondemand MP', cor:'#15181f', corNome:'Preto 040', qtd:2000,
+    limiteSistema:'28/04', dataConfirmada:'28/04', fase:2, obs:'', atualizadoHa:'há 9 dias', stale:true, hist:[] },
+  { op:'O7430627', fornecedor:'MATYLAS', fornecedorNome:'MATYLAS CONFECÇÕES 000148', produto:'0079748', nome:'Camiseta Premium Fem Ink MP', cor:'#15181f', corNome:'Preto 040', qtd:1800,
+    limiteSistema:'12/06', dataConfirmada:'12/06', fase:2, obs:'', atualizadoHa:'há 9 dias', stale:true, hist:[['02/11 08:15','OP criada no follow']] },
+  { op:'397379', fornecedor:'CIA HERING', fornecedorNome:'CIA HERING 000171', produto:'0079748', nome:'Camiseta Premium Fem Ink MP', cor:'#15181f', corNome:'Preto 040', qtd:2900,
+    limiteSistema:'03/06', dataConfirmada:'03/06', fase:7, obs:'Faturamento confirmado, aguardando coleta.', atualizadoHa:'há 4 horas', stale:false,
+    hist:[['11/11 15:20','Fase: <b>Controle de qualidade → Faturado</b>']] },
+];
+
+function stepperHTML(fase){
+  return FASES.map((_,i)=>{
+    const dot = `<div class="step ${i<fase?'done':i===fase?'now':''}"></div>`;
+    const line = i<FASES.length-1 ? `<div class="step-line ${i<fase?'done':''}"></div>` : '';
+    return dot+line;
+  }).join('');
+}
+
+function renderInterno(filtro){
+  const el = document.getElementById('oplist');
+  el.innerHTML = '';
+  OPS.filter(o => filtro==='all' || o.fornecedor===filtro).forEach((o,idx)=>{
+    const changed = o.limiteSistema !== o.dataConfirmada;
+    const div = document.createElement('div');
+    div.className = 'op';
+    div.innerHTML = `
+      <div class="op-top">
+        <div class="op-prod">
+          <div class="swatch" style="background:${o.cor}"></div>
+          <div>
+            <div class="name">${o.nome}</div>
+            <div class="meta">${o.produto} · ${o.corNome} · OP ${o.op} · ${o.fornecedorNome}</div>
+            <div class="phase-pill"><span class="dot2"></span>${FASES[o.fase]}</div>
+            <div class="stepper">${stepperHTML(o.fase)}</div>
+          </div>
+        </div>
+        <div class="op-right">
+          <div class="stat"><div class="l">Qtd</div><div class="v">${o.qtd.toLocaleString('pt-BR')}</div></div>
+          <div class="stat"><div class="l">Limite sistema</div><div class="v">${o.limiteSistema}</div></div>
+          <div class="stat"><div class="l">Confirmado fornecedor</div><div class="v ${changed?'changed':''}">${changed? o.limiteSistema+'<span class="arrow">→</span>'+o.dataConfirmada : o.dataConfirmada}</div></div>
+        </div>
+      </div>
+      ${o.obs ? `<div style="font-size:12.5px;color:var(--txt-mid)">“${o.obs}”</div>` : ''}
+      <div class="op-meta-row">
+        <div class="updated ${o.stale?'stale':''}">${o.stale?'⚠ ':''}Atualizado ${o.atualizadoHa}</div>
+        <button class="hist-btn" data-idx="${idx}">
+          <svg viewBox="0 0 24 24" fill="none"><path d="M12 8v5l3 2M21 12a9 9 0 11-3-6.7" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>
+          Histórico (${o.hist.length})
+        </button>
+      </div>
+      <div class="history" id="hist-${idx}">
+        ${o.hist.length ? o.hist.map(h=>`<div class="hitem"><div class="hdot"></div><div class="hbody">${h[1]}</div><div class="htime">${h[0]}</div></div>`).join('') : '<div class="hitem"><div class="hbody" style="color:var(--txt-lo)">Sem alterações registradas ainda.</div></div>'}
+      </div>
+    `;
+    el.appendChild(div);
+  });
+  el.querySelectorAll('.hist-btn').forEach(btn=>{
+    btn.addEventListener('click', ()=>{
+      document.getElementById('hist-'+btn.dataset.idx).classList.toggle('on');
+    });
+  });
+}
+
+// ATENÇÃO: dados FICTÍCIOS — esta cópia é só pra testar um link público (fora do Claude),
+// sem expor números reais de produção da Reserva Ink numa URL sem controle de acesso.
+const COR_HEX = { PRETO:'#15181f', BRANCO:'#f5f1ea', VERMELHO:'#b23b3b', MARINHO:'#1f2b4d', BORDEAUX:'#5a1f2a' };
+function corHex(c){ return COR_HEX[c] || '#3a4154'; }
+function fmtDataISO(iso){ if(!iso) return '—'; const [,m,d] = iso.split('-'); return `${d}/${m}`; }
+
+const FLOC_PRIORIDADE = [
+  { op:'T0001', nome:'CAMISETA TESTE A', cor:'PRETO', qtd:1500, prazo:'2026-11-16', status:'Postergado (+10d)' },
+  { op:'T0002', nome:'CAMISETA TESTE A', cor:'PRETO', qtd:1500, prazo:'2026-11-16', status:'Postergado (+10d)' },
+  { op:'T0003', nome:'CAMISETA TESTE B', cor:'BRANCO', qtd:1200, prazo:'2026-11-18', status:'Postergado (+3d)' },
+  { op:'T0004', nome:'CAMISETA TESTE B', cor:'BRANCO', qtd:1800, prazo:'2026-11-30', status:'No Prazo' },
+];
+
+const FLOC_NAO_PRIORIDADE = [
+  { op:'T0101', nome:'CAMISETA TESTE C', cor:'BRANCO', qtd:900, prazo:'2026-12-11', status:'Postergado (+20d)' },
+  { op:'T0102', nome:'CAMISETA TESTE C', cor:'BRANCO', qtd:1300, prazo:'2026-12-11', status:'Postergado (+40d)' },
+  { op:'T0103', nome:'CAMISETA TESTE A', cor:'PRETO', qtd:1500, prazo:'2026-12-19', status:'Postergado (+60d)' },
+  { op:'T0104', nome:'CAMISETA TESTE D', cor:'VERMELHO', qtd:2000, prazo:'2027-01-01', status:'No Prazo' },
+  { op:'T0105', nome:'CAMISETA TESTE D', cor:'VERMELHO', qtd:2000, prazo:'2027-01-01', status:'No Prazo' },
+  { op:'T0106', nome:'CAMISETA TESTE B', cor:'BRANCO', qtd:1800, prazo:'2027-01-15', status:'No Prazo' },
+  { op:'T0107', nome:'CAMISETA TESTE A', cor:'PRETO', qtd:2200, prazo:'2027-01-16', status:'Postergado (+76d)' },
+  { op:'T0108', nome:'CAMISETA TESTE E', cor:'MARINHO', qtd:1700, prazo:'2027-02-01', status:'No Prazo' },
+];
+
+function renderFornecedor(){
+  const el = document.getElementById('foptbody');
+  el.innerHTML = FLOC_PRIORIDADE.map((o,idx)=>`
+    <tr>
+      <td class="rownum">${idx+1}</td>
+      <td>
+        <div class="fr-prod">
+          <div class="swatch" style="background:${corHex(o.cor)}"></div>
+          <div class="tx">
+            <div class="name">${o.nome}</div>
+            <div class="meta">${o.cor}</div>
+          </div>
+        </div>
+      </td>
+      <td class="fr-ro">${o.op}</td>
+      <td class="fr-ro">${o.qtd.toLocaleString('pt-BR')}</td>
+      <td class="fr-ro">${fmtDataISO(o.prazo)}</td>
+      <td class="field">
+        <select class="fr-fase" id="f-fase-${idx}">
+          <option value="" selected>— Selecionar —</option>
+          ${FASES.map((f,i)=>`<option value="${i}">${f}</option>`).join('')}
+        </select>
+      </td>
+      <td class="field"><input class="fr-data" type="text" value="${fmtDataISO(o.prazo)}" placeholder="dd/mm"></td>
+      <td class="field"><input class="fr-obs" type="text" value="" placeholder="Opcional"></td>
+    </tr>
+  `).join('');
+  document.getElementById('fcount').innerHTML = `Mostrando <b>${FLOC_PRIORIDADE.length} de ${FLOC_PRIORIDADE.length}</b> OPs prioritárias (entregam em novembro/2026).`;
+
+  const elSec = document.getElementById('fsectbody');
+  elSec.innerHTML = FLOC_NAO_PRIORIDADE.map((o,idx)=>`
+    <tr>
+      <td class="rownum">${idx+1}</td>
+      <td>
+        <div class="fr-prod">
+          <div class="swatch" style="background:${corHex(o.cor)}"></div>
+          <div class="tx">
+            <div class="name">${o.nome}</div>
+            <div class="meta">${o.cor}</div>
+          </div>
+        </div>
+      </td>
+      <td class="fr-ro">${o.op}</td>
+      <td class="fr-ro">${o.qtd.toLocaleString('pt-BR')}</td>
+      <td class="fr-ro">${fmtDataISO(o.prazo)}</td>
+      <td class="field">
+        <select class="fr-fase" id="f-fase-sec-${idx}">
+          <option value="" selected>— Selecionar —</option>
+          ${FASES.map((f,i)=>`<option value="${i}">${f}</option>`).join('')}
+        </select>
+      </td>
+      <td class="field"><input class="fr-data" type="text" value="${fmtDataISO(o.prazo)}" placeholder="dd/mm"></td>
+      <td class="field"><input class="fr-obs" type="text" value="" placeholder="Opcional"></td>
+    </tr>
+  `).join('');
+  document.getElementById('fsec-count').textContent = FLOC_NAO_PRIORIDADE.length;
+}
+
+function setSheetMode(on){ document.body.classList.toggle('sheet-mode', on); }
+
+document.querySelectorAll('.tab').forEach(tab=>{
+  tab.addEventListener('click', ()=>{
+    document.querySelectorAll('.tab').forEach(t=>t.classList.remove('on'));
+    document.querySelectorAll('.view').forEach(v=>v.classList.remove('on'));
+    tab.classList.add('on');
+    document.getElementById('view-'+tab.dataset.tab).classList.add('on');
+    setSheetMode(tab.dataset.tab === 'fornecedor');
+  });
+});
+
+document.getElementById('chips-fornecedor').addEventListener('click', e=>{
+  const btn = e.target.closest('.chipf');
+  if(!btn) return;
+  document.querySelectorAll('#chips-fornecedor .chipf').forEach(c=>c.classList.remove('on'));
+  btn.classList.add('on');
+  renderInterno(btn.dataset.f);
+});
+
+document.getElementById('btn-save').addEventListener('click', ()=>{
+  const toast = document.getElementById('toast');
+  toast.classList.add('on');
+  setTimeout(()=>toast.classList.remove('on'), 2200);
+});
+
+// Simula o link que o fornecedor recebe por e-mail: #fornecedor abre só a página dele,
+// sem a aba "Visão interna" — nem ele sabe que ela existe.
+function aplicarModoLink(){
+  const soFornecedor = location.hash === '#fornecedor';
+  document.querySelector('.tabs').style.display = soFornecedor ? 'none' : 'flex';
+  if(soFornecedor){
+    document.querySelectorAll('.tab').forEach(t=>t.classList.remove('on'));
+    document.querySelectorAll('.view').forEach(v=>v.classList.remove('on'));
+    document.getElementById('view-fornecedor').classList.add('on');
+    setSheetMode(true);
+  }
+}
+window.addEventListener('hashchange', aplicarModoLink);
+
+renderInterno('all');
+renderFornecedor();
+aplicarModoLink();
+</script>
