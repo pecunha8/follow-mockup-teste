@@ -215,13 +215,35 @@ input.fr-obs{width:200px}
 .toast.on{transform:translateX(-50%) translateY(0)}
 .toast svg{width:14px;height:14px; color:var(--ok)}
 
-.fsecondary{margin-top:30px; border-top:1px solid var(--line-soft); padding-top:4px}
-.fsecondary summary{cursor:pointer; font-size:13px; font-weight:600; color:var(--txt-mid); list-style:none; display:flex; align-items:center; gap:8px; padding:12px 0; user-select:none}
+.fsecondary{margin-top:30px; border-top:1px solid var(--line-soft); padding-top:16px}
+.fsecondary summary{
+  cursor:pointer; font-size:13.5px; font-weight:600; color:var(--txt-hi); list-style:none;
+  display:inline-flex; align-items:center; gap:8px; user-select:none;
+  background:var(--card-hi); border:1px solid var(--line); border-radius:999px; padding:9px 16px;
+}
+.fsecondary summary:hover{border-color:var(--accent)}
 .fsecondary summary::-webkit-details-marker{display:none}
-.fsecondary summary .car{transition:transform .2s; color:var(--txt-lo); font-size:11px}
+.fsecondary summary .car{transition:transform .2s; color:var(--txt-mid); font-size:13px}
 .fsecondary[open] summary .car{transform:rotate(90deg)}
-.fsecondary summary .n{font-family:var(--mono); font-size:10px; color:var(--txt-lo); background:var(--card-hi); border-radius:999px; padding:2px 7px; margin-left:2px}
-.fsecondary .fsec-note{font-size:12px; color:var(--txt-lo); margin:0 0 10px}
+.fsecondary summary .n{font-family:var(--mono); font-size:10px; color:var(--txt-lo); background:var(--panel); border-radius:999px; padding:2px 7px; margin-left:2px}
+.fsecondary .fsec-note{font-size:12px; color:var(--txt-lo); margin:12px 0 10px}
+
+.status-badge{display:inline-flex; align-items:center; gap:5px; font-size:11.5px; font-weight:600; padding:4px 11px; border-radius:999px; white-space:nowrap}
+.status-badge .sdot{width:6px; height:6px; border-radius:50%; flex-shrink:0}
+.status-badge.st-prioridade{background:rgba(255,77,103,.12); color:var(--danger)}
+.status-badge.st-prioridade .sdot{background:var(--danger)}
+.status-badge.st-normal{background:var(--card-hi); color:var(--txt-mid)}
+.status-badge.st-normal .sdot{background:var(--txt-lo)}
+.status-badge.clickable{cursor:pointer; border:1px solid transparent; transition:filter .15s}
+.status-badge.clickable:hover{filter:brightness(1.25); border-color:currentColor}
+
+.send-btn{
+  background:var(--accent); color:#fff; border:none; border-radius:11px; padding:0 18px; height:50px;
+  font-family:var(--sans); font-weight:700; font-size:13px; cursor:pointer; display:flex; align-items:center; gap:8px; flex-shrink:0;
+}
+.send-btn:hover{background:var(--accent-dim)}
+.send-btn svg{width:15px;height:15px}
+.supplier-label{font-family:var(--mono); font-size:9.5px; letter-spacing:.8px; text-transform:uppercase; color:var(--txt-lo); margin-bottom:3px}
 .month-sep td{background:var(--panel); font-family:var(--mono); font-size:10px; letter-spacing:.6px; text-transform:uppercase; color:var(--txt-lo); padding:7px 12px; border-bottom:1px solid var(--line)}
 
 /* ---- legenda (topo da página do fornecedor) ---- */
@@ -261,9 +283,15 @@ input.fr-obs{width:200px}
         <h1>Acompanhamento de Produção</h1>
         <div class="desc">Fase de cada OP, atualizada pelo próprio fornecedor — sem mais copiar e colar planilha.</div>
       </div>
-      <div class="reminder-chip">
-        <div class="dot"><svg viewBox="0 0 24 24" fill="none"><path d="M12 5v7l4 2" stroke="#fff" stroke-width="2" stroke-linecap="round"/><circle cx="12" cy="12" r="9" stroke="#fff" stroke-width="2"/></svg></div>
-        <div class="t"><b>Próximo lembrete: qui 09:00</b>8 fornecedores, por e-mail</div>
+      <div style="display:flex; gap:12px; align-items:center; flex-wrap:wrap">
+        <div class="reminder-chip">
+          <div class="dot"><svg viewBox="0 0 24 24" fill="none"><path d="M12 5v7l4 2" stroke="#fff" stroke-width="2" stroke-linecap="round"/><circle cx="12" cy="12" r="9" stroke="#fff" stroke-width="2"/></svg></div>
+          <div class="t"><b>Próximo lembrete: qui 09:00</b>8 fornecedores, por e-mail</div>
+        </div>
+        <button class="send-btn" id="btn-enviar-follow">
+          <svg viewBox="0 0 24 24" fill="none"><path d="M22 2L11 13M22 2l-7 20-4-9-9-4 20-7z" stroke="#fff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+          Enviar agora
+        </button>
       </div>
     </div>
 
@@ -309,9 +337,10 @@ input.fr-obs{width:200px}
       </div>
 
       <div class="legend">
-        <div class="litem"><span class="ldot red"></span><b>Prioridade</b> — entrega esse mês, atualize primeiro</div>
-        <div class="lsep"></div>
-        <div class="litem"><span class="ldot gray"></span><b>Outras OPs</b> — entregam mais pra frente, sem pressa</div>
+        <div class="litem">
+          <span class="status-badge st-prioridade"><span class="sdot"></span>Prioridade</span><span class="status-badge st-normal"><span class="sdot"></span>Normal</span>
+          — Status definido pelo time Reserva Ink. Produza o que estiver <b>Prioridade</b> primeiro.
+        </div>
         <div class="lsep"></div>
         <div class="litem">Você preenche: <span class="lfield">Fase produtiva</span><span class="lfield">Entrega confirmada</span><span class="lfield">Observação</span></div>
       </div>
@@ -321,7 +350,7 @@ input.fr-obs{width:200px}
         <table class="ftable">
           <thead>
             <tr>
-              <th class="rownum"></th><th>Produto</th><th>OP</th><th>Qtd</th><th>Prazo sistema</th><th>Fase produtiva</th><th>Entrega confirmada</th><th>Observação</th>
+              <th class="rownum"></th><th>Produto</th><th>OP</th><th>Qtd</th><th>Prazo sistema</th><th>Status</th><th>Fase produtiva</th><th>Entrega confirmada</th><th>Observação</th>
             </tr>
           </thead>
           <tbody id="foptbody"></tbody>
@@ -329,14 +358,14 @@ input.fr-obs{width:200px}
       </div>
       <div class="fcount" id="fcount"></div>
 
-      <details class="fsecondary">
+      <details class="fsecondary" open>
         <summary><span class="car">▸</span> Outras OPs em aberto — sem prioridade essa semana <span class="n" id="fsec-count"></span></summary>
-        <div class="fsec-note">Entregam mais pra frente. Pode atualizar também, mas não é urgente.</div>
+        <div class="fsec-note">Demais OPs em aberto com a Reserva Ink.</div>
         <div class="ftable-scroll">
           <table class="ftable">
             <thead>
               <tr>
-                <th class="rownum"></th><th>Produto</th><th>OP</th><th>Qtd</th><th>Prazo sistema</th><th>Fase produtiva</th><th>Entrega confirmada</th><th>Observação</th>
+                <th class="rownum"></th><th>Produto</th><th>OP</th><th>Qtd</th><th>Prazo sistema</th><th>Status</th><th>Fase produtiva</th><th>Entrega confirmada</th><th>Observação</th>
               </tr>
             </thead>
             <tbody id="fsectbody"></tbody>
@@ -367,17 +396,17 @@ const FASES = ['Matéria-prima em estoque','Fila de corte','Costura','Estamparia
 
 const OPS = [
   { op:'O7224746', fornecedor:'FLOC', fornecedorNome:'FLOC TÊXTIL INDÚSTRIA E C', produto:'0061128', nome:'Camiseta MAS Ink Ondemand MP', cor:'#f5f1ea', corNome:'Branco 014', qtd:2040,
-    limiteSistema:'03/06', dataConfirmada:'10/06', fase:5, obs:'Atraso no tecido importado — já normalizado.', atualizadoHa:'há 2 dias', stale:false,
+    limiteSistema:'03/06', dataConfirmada:'10/06', fase:5, obs:'Atraso no tecido importado — já normalizado.', atualizadoHa:'há 2 dias', stale:false, prioridade:true,
     hist:[['11/11 09:40','Fase: <b>Costura → Controle de qualidade</b>'],['08/11 14:05','Data de entrega alterada: <b>03/06 → 10/06</b> — Obs: atraso no tecido importado']] },
   { op:'O7861553', fornecedor:'FLOC', fornecedorNome:'FLOC TÊXTIL INDÚSTRIA E C', produto:'0061128', nome:'Camiseta MAS Ink Ondemand MP', cor:'#f5f1ea', corNome:'Branco 014', qtd:2000,
     limiteSistema:'16/10', dataConfirmada:'16/10', fase:3, obs:'', atualizadoHa:'há 1 dia', stale:false,
     hist:[['10/11 11:02','Fase: <b>Fila de corte → Estamparia</b>']] },
   { op:'O7224747', fornecedor:'FLOC', fornecedorNome:'FLOC TÊXTIL INDÚSTRIA E C', produto:'0061128', nome:'Camiseta MAS Ink Ondemand MP', cor:'#f5f1ea', corNome:'Branco 014', qtd:2000,
-    limiteSistema:'11/12', dataConfirmada:'11/12', fase:0, obs:'', atualizadoHa:'há 11 dias', stale:true, hist:[] },
+    limiteSistema:'11/12', dataConfirmada:'11/12', fase:0, obs:'', atualizadoHa:'há 11 dias', stale:true, prioridade:true, hist:[] },
   { op:'O7224788', fornecedor:'FLOC', fornecedorNome:'FLOC TÊXTIL INDÚSTRIA E C', produto:'0061129', nome:'Camiseta Fem Ink Ondemand MP', cor:'#f5f1ea', corNome:'Branco 014', qtd:2000,
     limiteSistema:'19/12', dataConfirmada:'19/12', fase:1, obs:'', atualizadoHa:'há 1 dia', stale:false, hist:[['10/11 09:12','Fase: <b>MP em estoque → Fila de corte</b>']] },
   { op:'O7261933', fornecedor:'FLOC', fornecedorNome:'FLOC TÊXTIL INDÚSTRIA E C', produto:'0061129', nome:'Camiseta Fem Ink Ondemand MP', cor:'#15181f', corNome:'Preto 040', qtd:2000,
-    limiteSistema:'18/12', dataConfirmada:'18/12', fase:0, obs:'', atualizadoHa:'há 11 dias', stale:true, hist:[] },
+    limiteSistema:'18/12', dataConfirmada:'18/12', fase:0, obs:'', atualizadoHa:'há 11 dias', stale:true, prioridade:true, hist:[] },
   { op:'O7261954', fornecedor:'FLOC', fornecedorNome:'FLOC TÊXTIL INDÚSTRIA E C', produto:'0061129', nome:'Camiseta Fem Ink Ondemand MP', cor:'#15181f', corNome:'Preto 040', qtd:1850,
     limiteSistema:'07/05', dataConfirmada:'07/05', fase:4, obs:'', atualizadoHa:'há 3 dias', stale:false, hist:[['08/11 16:40','Fase: <b>Estamparia → Acabamento interno</b>']] },
   { op:'O7261955', fornecedor:'FLOC', fornecedorNome:'FLOC TÊXTIL INDÚSTRIA E C', produto:'0061128', nome:'Camiseta MAS Ink Ondemand MP', cor:'#15181f', corNome:'Preto 040', qtd:2200,
@@ -402,7 +431,10 @@ function stepperHTML(fase){
   }).join('');
 }
 
+let filtroAtual = 'all';
+
 function renderInterno(filtro){
+  filtroAtual = filtro;
   const el = document.getElementById('oplist');
   el.innerHTML = '';
   OPS.filter(o => filtro==='all' || o.fornecedor===filtro).forEach((o,idx)=>{
@@ -416,11 +448,16 @@ function renderInterno(filtro){
           <div>
             <div class="name">${o.nome}</div>
             <div class="meta">${o.produto} · ${o.corNome} · OP ${o.op} · ${o.fornecedorNome}</div>
+            <div class="supplier-label" style="margin-top:8px">Status do fornecedor</div>
             <div class="phase-pill"><span class="dot2"></span>${FASES[o.fase]}</div>
             <div class="stepper">${stepperHTML(o.fase)}</div>
           </div>
         </div>
         <div class="op-right">
+          <div class="stat">
+            <div class="l">Status</div>
+            <div class="v"><span class="status-badge clickable ${o.prioridade?'st-prioridade':'st-normal'}" data-op="${o.op}"><span class="sdot"></span>${o.prioridade?'Prioridade':'Normal'}</span></div>
+          </div>
           <div class="stat"><div class="l">Qtd</div><div class="v">${o.qtd.toLocaleString('pt-BR')}</div></div>
           <div class="stat"><div class="l">Limite sistema</div><div class="v">${o.limiteSistema}</div></div>
           <div class="stat"><div class="l">Confirmado fornecedor</div><div class="v ${changed?'changed':''}">${changed? o.limiteSistema+'<span class="arrow">→</span>'+o.dataConfirmada : o.dataConfirmada}</div></div>
@@ -445,6 +482,21 @@ function renderInterno(filtro){
       document.getElementById('hist-'+btn.dataset.idx).classList.toggle('on');
     });
   });
+  el.querySelectorAll('.status-badge.clickable').forEach(badge=>{
+    badge.addEventListener('click', ()=>{
+      const op = OPS.find(x=>x.op===badge.dataset.op);
+      op.prioridade = !op.prioridade;
+      renderInterno(filtroAtual);
+      mostrarToast(op.prioridade ? `${op.op} marcada como Prioridade` : `${op.op} voltou a Normal`);
+    });
+  });
+}
+
+function mostrarToast(texto){
+  const toast = document.getElementById('toast');
+  document.getElementById('toast-text').textContent = texto;
+  toast.classList.add('on');
+  setTimeout(()=>toast.classList.remove('on'), 2200);
 }
 
 // ATENÇÃO: dados FICTÍCIOS — esta cópia é só pra testar um link público (fora do Claude),
@@ -452,6 +504,12 @@ function renderInterno(filtro){
 const COR_HEX = { PRETO:'#15181f', BRANCO:'#f5f1ea', VERMELHO:'#b23b3b', MARINHO:'#1f2b4d', BORDEAUX:'#5a1f2a' };
 function corHex(c){ return COR_HEX[c] || '#3a4154'; }
 function fmtDataISO(iso){ if(!iso) return '—'; const [,m,d] = iso.split('-'); return `${d}/${m}`; }
+// Status de prioridade — quem define é o time Reserva Ink, o fornecedor só visualiza.
+function statusBadgeHTML(prioridade){
+  return prioridade
+    ? '<span class="status-badge st-prioridade"><span class="sdot"></span>Prioridade</span>'
+    : '<span class="status-badge st-normal"><span class="sdot"></span>Normal</span>';
+}
 
 const FLOC_PRIORIDADE = [
   { op:'T0001', nome:'CAMISETA TESTE A', cor:'PRETO', qtd:1500, prazo:'2026-11-16', status:'Postergado (+10d)' },
@@ -488,6 +546,7 @@ function renderFornecedor(){
       <td class="fr-ro">${o.op}</td>
       <td class="fr-ro">${o.qtd.toLocaleString('pt-BR')}</td>
       <td class="fr-ro">${fmtDataISO(o.prazo)}</td>
+      <td>${statusBadgeHTML(true)}</td>
       <td class="field">
         <select class="fr-fase" id="f-fase-${idx}">
           <option value="" selected>— Selecionar —</option>
@@ -495,7 +554,7 @@ function renderFornecedor(){
         </select>
       </td>
       <td class="field"><input class="fr-data" type="text" value="${fmtDataISO(o.prazo)}" placeholder="dd/mm"></td>
-      <td class="field"><input class="fr-obs" type="text" value="" placeholder="Opcional"></td>
+      <td class="field"><input class="fr-obs" type="text" value="" placeholder="Preencha aqui"></td>
     </tr>
   `).join('');
   document.getElementById('fcount').innerHTML = `Mostrando <b>${FLOC_PRIORIDADE.length} de ${FLOC_PRIORIDADE.length}</b> OPs prioritárias (entregam em novembro/2026).`;
@@ -516,6 +575,7 @@ function renderFornecedor(){
       <td class="fr-ro">${o.op}</td>
       <td class="fr-ro">${o.qtd.toLocaleString('pt-BR')}</td>
       <td class="fr-ro">${fmtDataISO(o.prazo)}</td>
+      <td>${statusBadgeHTML(false)}</td>
       <td class="field">
         <select class="fr-fase" id="f-fase-sec-${idx}">
           <option value="" selected>— Selecionar —</option>
@@ -523,7 +583,7 @@ function renderFornecedor(){
         </select>
       </td>
       <td class="field"><input class="fr-data" type="text" value="${fmtDataISO(o.prazo)}" placeholder="dd/mm"></td>
-      <td class="field"><input class="fr-obs" type="text" value="" placeholder="Opcional"></td>
+      <td class="field"><input class="fr-obs" type="text" value="" placeholder="Preencha aqui"></td>
     </tr>
   `).join('');
   document.getElementById('fsec-count').textContent = FLOC_NAO_PRIORIDADE.length;
@@ -549,10 +609,46 @@ document.getElementById('chips-fornecedor').addEventListener('click', e=>{
   renderInterno(btn.dataset.f);
 });
 
+// Teste: sem backend ainda, então o "Salvar" manda o preenchimento pra um webhook do
+// Discord (configurado só nesta cópia pública, pra validar o fluxo ponta a ponta).
+const WEBHOOK_TESTE = 'https://discord.com/api/webhooks/1572370183685808279/kVfmUU8X5eRyRamh9QAvgYgZSwUuABEo91iploKScRr8dq93S5yx9DhW23-hqEfQ9INV';
+
+function coletarPreenchimento(){
+  const linhas = [];
+  document.querySelectorAll('#foptbody tr, #fsectbody tr').forEach(tr=>{
+    const op = tr.children[2].textContent.trim();
+    const faseSel = tr.querySelector('select.fr-fase');
+    const dataInp = tr.querySelector('input.fr-data');
+    const obsInp = tr.querySelector('input.fr-obs');
+    const faseTxt = faseSel && faseSel.value !== '' ? faseSel.options[faseSel.selectedIndex].textContent : '';
+    const dataTxt = dataInp ? dataInp.value.trim() : '';
+    const obsTxt = obsInp ? obsInp.value.trim() : '';
+    if(faseTxt || obsTxt) linhas.push({ op, fase: faseTxt, data: dataTxt, obs: obsTxt });
+  });
+  return linhas;
+}
+
 document.getElementById('btn-save').addEventListener('click', ()=>{
-  const toast = document.getElementById('toast');
-  toast.classList.add('on');
-  setTimeout(()=>toast.classList.remove('on'), 2200);
+  const linhas = coletarPreenchimento();
+  if(!linhas.length){
+    mostrarToast('Preencha ao menos a fase de uma OP antes de salvar');
+    return;
+  }
+  const texto = '**Follow atualizado — FORNECEDOR TESTE LTDA**\n' + linhas.map(l =>
+    `• **${l.op}** — Fase: ${l.fase || '—'} | Entrega confirmada: ${l.data || '—'}${l.obs ? ` | Obs: ${l.obs}` : ''}`
+  ).join('\n');
+
+  fetch(WEBHOOK_TESTE, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ content: texto }),
+  })
+    .then(() => mostrarToast('Atualização enviada ao time Reserva Ink'))
+    .catch(() => mostrarToast('Erro ao enviar — tenta de novo'));
+});
+
+document.getElementById('btn-enviar-follow').addEventListener('click', ()=>{
+  mostrarToast('Follow enviado a 8 fornecedores, com as prioridades atuais');
 });
 
 // Simula o link que o fornecedor recebe por e-mail: #fornecedor abre só a página dele,
